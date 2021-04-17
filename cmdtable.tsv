@@ -1,0 +1,11 @@
+# Lines starting with # are comments
+# This file is tab separated table
+# 1st column: id number
+# 2nd column: count of execution
+# until the end of line: command line string
+1	1	notify-send hello
+1	2	notify-send world
+1	3	notify-send '!'
+2	1	copyq menu
+2	2	copyq show
+2	3	copyq popup hello 'triple click'
