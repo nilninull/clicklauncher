@@ -1,7 +1,7 @@
 use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version};
 use dirs;
-use raw_sync::locks::*;
-use shared_memory::*;
+use raw_sync::locks::{LockInit, Mutex};
+use shared_memory::{ShmemConf, ShmemError};
 use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::process::Command;
