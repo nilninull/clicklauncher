@@ -1,3 +1,4 @@
+use anyhow::{self, Context};
 use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version};
 use dirs;
 use raw_sync::locks::{LockInit, Mutex};
@@ -16,19 +17,19 @@ fn is_number_string(s: String) -> Result<(), String> {
     }
 }
 
-fn make_cmd_db(file_name: &str) -> io::Result<HashMap<(u32, u32), String>> {
+fn make_cmd_db(file_name: &str) -> anyhow::Result<HashMap<(u32, u32), String>> {
     let mut db = HashMap::new();
 
     let f = std::fs::File::open(file_name)?;
     let br = io::BufReader::new(f);
     for line in br.lines() {
-        let line = line.unwrap();
+        let line = line?;
         if !line.starts_with('#') {
             let cols: Vec<_> = line.splitn(3, '\t').collect();
 
             if cols.len() == 3 {
-                let id = cols[0].parse::<u32>().unwrap();
-                let count = cols[1].parse::<u32>().unwrap();
+                let id = cols[0].parse()?;
+                let count = cols[1].parse()?;
                 let cmdstr = cols[2].to_owned();
 
                 db.insert((id, count), cmdstr);
@@ -60,27 +61,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let dur = std::time::Duration::from_millis(msecs);
 
-    let default_config_location = format!(
-        "{}/clicklauncher/cmdtable.tsv",
-        dirs::config_dir().unwrap().to_str().unwrap()
-    );
+    let config_dir_path = dirs::config_dir().context("Please check your config directory")?;
+    let default_config_location =
+        format!("{}/clicklauncher/cmdtable.tsv", config_dir_path.display());
 
     let config_file = matches
         .value_of("CONFIG")
         .and_then(|s| Some(s))
         .unwrap_or(&default_config_location);
 
-    let cdb = match make_cmd_db(&config_file) {
-        Ok(db) => db,
-        Err(e) => {
-            if e.kind() == io::ErrorKind::NotFound {
-                eprintln!("Please check config file: `{}'", config_file);
-                std::process::exit(2)
-            } else {
-                return Err(Box::new(e));
-            }
-        }
-    };
+    let cdb = make_cmd_db(&config_file)
+        .with_context(|| format!("Please check the config file `{}'", config_file))?;
 
     let mut shmem = match ShmemConf::new().size(4096).flink(&map_file_name).create() {
         Ok(m) => m,

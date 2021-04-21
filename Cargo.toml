@@ -1,6 +1,6 @@
 [package]
 name = "clicklauncher"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["nilninull <nilninull@gmail.com>"]
 edition = "2018"
 description = "Launcher that switches programs according to the number of executions"
@@ -8,6 +8,7 @@ description = "Launcher that switches programs according to the number of execut
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.40"
 clap = "2.33.3"
 dirs = "3.0.1"
 raw_sync = "0.1.5"
