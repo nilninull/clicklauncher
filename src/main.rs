@@ -17,7 +17,7 @@ fn is_number_string(s: String) -> Result<(), String> {
     }
 }
 
-fn make_cmd_db(file_name: &str) -> anyhow::Result<HashMap<(u32, u32), String>> {
+fn make_cmd_db(file_name: &str) -> anyhow::Result<HashMap<Vec<u32>, String>> {
     let mut db = HashMap::new();
 
     let f = std::fs::File::open(file_name)?;
@@ -25,14 +25,21 @@ fn make_cmd_db(file_name: &str) -> anyhow::Result<HashMap<(u32, u32), String>> {
     for line in br.lines() {
         let line = line?;
         if !line.starts_with('#') {
-            let cols: Vec<_> = line.splitn(3, '\t').collect();
+            let cols: Vec<_> = line.splitn(2, '\t').collect();
 
-            if cols.len() == 3 {
-                let id = cols[0].parse()?;
-                let count = cols[1].parse()?;
-                let cmdstr = cols[2].to_owned();
+            if cols.len() == 2 {
+                let mut ids = vec![];
+                cols[0]
+                    .split(' ')
+                    .filter(|s| !s.is_empty())
+                    .try_for_each(|s| {
+                        s.parse()
+                            .map(|u| ids.push(u))
+                            .with_context(|| format!("`{}' is not suitable for id number", s))
+                    })?;
+                let cmdstr = cols[1].to_owned();
 
-                db.insert((id, count), cmdstr);
+                db.insert(ids, cmdstr);
             }
         }
     }
@@ -50,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .get_matches();
 
-    let user_name = std::env::var("USER").expect("Please check $USER value");
+    let user_name = std::env::var("USER").context("Please check $USER value")?;
 
     let map_file_name = format!("{}_{}", crate_name!(), user_name);
 
@@ -87,27 +94,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (mutex, _) =
         unsafe { Mutex::from_existing(base_ptr, base_ptr.add(Mutex::size_of(Some(base_ptr))))? };
+
     {
         let guard = mutex.lock()?;
-        let val: &mut [u32] = unsafe { std::slice::from_raw_parts_mut(*guard as *mut u32, 2) };
-        if shmem.is_owner() || val[0] != cid {
-            val[0] = cid;
-            val[1] = 1;
-            count = 1;
-        } else {
-            val[1] += 1;
-            count = val[1];
-        }
+        let val: &mut [u32] = unsafe { std::slice::from_raw_parts_mut(*guard as *mut u32, 1013) };
+        val[0] += 1;
+        count = val[0];
+        val[count as usize] = cid;
     }
 
     std::thread::sleep(dur);
 
     {
         let guard = mutex.lock()?;
-        let val: &mut [u32] = unsafe { std::slice::from_raw_parts_mut(*guard as *mut u32, 2) };
-        if cid == val[0] && count == val[1] {
+        let val: &mut [u32] = unsafe { std::slice::from_raw_parts_mut(*guard as *mut u32, 1013) };
+        if count == val[0] {
             shmem.set_owner(true);
-            if let Some(value) = cdb.get(&(cid, count)) {
+            let mut cid_seq = vec![];
+            for i in 1..=count {
+                cid_seq.push(val[i as usize])
+            }
+            if let Some(value) = cdb.get(&cid_seq) {
                 println!("run command: {}", value);
 
                 if cfg!(target_os = "windows") {
@@ -115,13 +122,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .arg("/C")
                         .arg(value)
                         .spawn()
-                        .expect("failed to execute process");
+                        .context("failed to execute process")?;
                 } else {
                     Command::new("sh")
                         .arg("-c")
                         .arg(value)
                         .spawn()
-                        .expect("failed to execute process");
+                        .context("failed to execute process")?;
                 }
             }
         } else {

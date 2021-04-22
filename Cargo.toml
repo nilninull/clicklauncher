@@ -1,6 +1,6 @@
 [package]
 name = "clicklauncher"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["nilninull <nilninull@gmail.com>"]
 edition = "2018"
 description = "Launcher that switches programs according to the number of executions"

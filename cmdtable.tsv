@@ -1,11 +1,13 @@
 # Lines starting with # are comments
 # This file is tab separated table
-# 1st column: id number
-# 2nd column: count of execution
+# 1st column: space separated id number sequence
 # until the end of line: command line string
-1	1	notify-send hello
-1	2	notify-send world
-1	3	notify-send '!'
-2	1	copyq menu
-2	2	copyq show
-2	3	copyq popup hello 'triple click'
+1	notify-send clicklauncher 'single click!'
+1 1	notify-send clicklauncher 'double click!!'
+1 1 1	notify-send clicklauncher 'triple click!!!'
+2 	copyq menu
+2 2	notify-send "$(date +'%a %d  %T')" "$(cal)"
+2 2 2	notify-send clicklauncher "$(cat ~/.config/clicklauncher/cmdtable.tsv)"
+1 2	notify-send clicklauncher 'compound ids 1 -> 2'
+2 1	notify-send clicklauncher 'compound ids 2 -> 1'
+
