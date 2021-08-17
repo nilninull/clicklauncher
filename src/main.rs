@@ -25,21 +25,18 @@ fn make_cmd_db(file_name: &str) -> anyhow::Result<HashMap<Vec<u32>, String>> {
     for line in br.lines() {
         let line = line?;
         if !line.starts_with('#') {
-            let cols: Vec<_> = line.splitn(2, '\t').collect();
-
-            if cols.len() == 2 {
-                let mut ids = vec![];
-                cols[0]
+            if let Some((idstr, cmdstr)) = line.split_once('\t') {
+                let mut idvec = vec![];
+                idstr
                     .split(' ')
                     .filter(|s| !s.is_empty())
                     .try_for_each(|s| {
                         s.parse()
-                            .map(|u| ids.push(u))
+                            .map(|u| idvec.push(u))
                             .with_context(|| format!("`{}' is not suitable for id number", s))
                     })?;
-                let cmdstr = cols[1].to_owned();
 
-                db.insert(ids, cmdstr);
+                db.insert(idvec, cmdstr.to_owned());
             }
         }
     }
