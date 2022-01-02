@@ -1,5 +1,5 @@
 # clicklauncher
-clicklauncher is a small tool that runs different application programs based on the number of mouse clicks (or key types).
+clicklauncher is a small tool that runs different application programs based on the number of mouse clicks or key types.
 
 It was developed to be used with window managers such as sway.
 ## Usage
@@ -8,31 +8,26 @@ It was developed to be used with window managers such as sway.
 ### Config file location
 - The location of the configuration file can be specified with the -c option.
 - The default location for the configuration file is $XDG_CONFIG_HOME/clicklauncher/cmdtable.tsv on Linux.
-- If you want to know the default location, please run the following command to check it. (Sorry for the inconvenience.)
-```
-$ clicklauncher 0
-# 0 or any other number as a required argument
-```
+- If you want to know the default location, please run the command with --help option.
 ## Help message
 ```
-clicklauncher --help
-clicklauncher 0.2.1
+$ clicklauncher --help
+clicklauncher 0.3.0
 nilninull <nilninull@gmail.com>
 Launcher that switches programs according to the number of executions
 
 USAGE:
     clicklauncher [OPTIONS] <ID>
 
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-
-OPTIONS:
-    -c, --config <FILE>    Sets a custom config file
-    -s, --msecs <MSECS>    click separation time by milli seconds [default: 250ms]
-
 ARGS:
     <ID>    click id number
+
+OPTIONS:
+    -c, --config <FILE>...    Sets a custom config file [default:
+                              ~/.config/clicklauncher/cmdtable.tsv]
+    -h, --help                Print help information
+    -s, --msecs <MSECS>...    click separation time by milli seconds [default: 250]
+    -V, --version             Print version information
 ```
 ## Example
 ### Window manager settings (from my sway config)

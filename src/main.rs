@@ -1,5 +1,5 @@
 use anyhow::{self, Context};
-use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version};
+use clap::{app_from_crate, arg, crate_name};
 use dirs;
 use raw_sync::locks::{LockInit, Mutex};
 use shared_memory::{ShmemConf, ShmemError};
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::process::Command;
 
-fn is_number_string(s: String) -> Result<(), String> {
+fn is_number_string(s: &str) -> Result<(), String> {
     if s.bytes().all(|c| c.is_ascii_digit()) {
         Ok(())
     } else {
@@ -44,35 +44,30 @@ fn make_cmd_db(file_name: &str) -> anyhow::Result<HashMap<Vec<u32>, String>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let matches = clap_app!((crate_name!()) =>
-          (version: crate_version!())
-          (author: crate_authors!())
-          (about: crate_description!())
-          (@arg CONFIG: -c --config [FILE] "Sets a custom config file")
-          (@arg MSECS: -s --msecs +takes_value {is_number_string} "click separation time by milli seconds [default: 250ms]")
-          (@arg ID: <ID> {is_number_string} "click id number")
-    )
-    .get_matches();
+    let config_dir_path = dirs::config_dir().context("Please check your config directory")?;
+    let default_config_location =
+        format!("{}/clicklauncher/cmdtable.tsv", config_dir_path.display());
+
+    let matches = app_from_crate!()
+        .args(&[
+            arg!(CONFIG: -c --config [FILE] "Sets a custom config file")
+                .default_value(&default_config_location),
+            arg!(MSECS: -s --msecs [MSECS] "click separation time by milli seconds")
+                .default_value("250")
+                .validator(is_number_string),
+            arg!(ID: <ID> "click id number").validator(is_number_string),
+        ])
+        .get_matches();
 
     let user_name = std::env::var("USER").context("Please check $USER value")?;
 
     let map_file_name = format!("{}_{}", crate_name!(), user_name);
 
-    let msecs = matches
-        .value_of("MSECS")
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(250);
+    let msecs = matches.value_of_t::<u64>("MSECS").unwrap();
 
     let dur = std::time::Duration::from_millis(msecs);
 
-    let config_dir_path = dirs::config_dir().context("Please check your config directory")?;
-    let default_config_location =
-        format!("{}/clicklauncher/cmdtable.tsv", config_dir_path.display());
-
-    let config_file = matches
-        .value_of("CONFIG")
-        .and_then(|s| Some(s))
-        .unwrap_or(&default_config_location);
+    let config_file = matches.value_of("CONFIG").unwrap();
 
     let cdb = make_cmd_db(&config_file)
         .with_context(|| format!("Please check the config file `{}'", config_file))?;
@@ -83,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => return Err(Box::new(e)),
     };
 
-    let cid = matches.value_of("ID").unwrap().parse().unwrap();
+    let cid = matches.value_of_t("ID").unwrap();
 
     let count;
 
